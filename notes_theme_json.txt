@@ -1,0 +1,27 @@
+            "--background": background on the right + filling of username and password if empty
+            "--foreground": font color of most things 
+            "--card": dont know
+            "--card-foreground": dont know
+            "--popover": color of the (logout,user) popup
+            "--popover-foreground": font color of the above
+            "--primary": color of message send and D for dev and Continue in main screen
+            "--primary-foreground": font color of the above 
+            "--secondary": dont know
+            "--secondary-foreground": dont know
+            "--muted": background of chainlit logo at main screen 
+            "--muted-foreground": "font color of Type your message, and some other logo colors
+            "--accent": text boxes of the chat
+            "--accent-foreground": color of readme on hover
+            "--destructive": dont know
+            "--destructive-foreground": dont know
+            "--border": border of create new chat box
+            "--input": border of username and password boxes
+            "--ring": same as above? and maybe circle around user letter on top right
+            "--sidebar-background": side bar background on the left
+            "--sidebar-foreground": font color of above
+            "--sidebar-primary": dont know
+            "--sidebar-primary-foreground": dont know
+            "--sidebar-accent": color of old chat item in chat history
+            "--sidebar-accent-foreground": font color of above
+            "--sidebar-border": border when mouse is hovered over chat sidebar
+            "--sidebar-ring": dont know

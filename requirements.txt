@@ -1,0 +1,13 @@
+python-dotenv
+pydantic
+typing_extensions
+langchain_core
+langchain_openai
+langgraph
+pandas
+numpy
+vanna
+langchain_community
+langchain_experimental
+ipython
+chainlit

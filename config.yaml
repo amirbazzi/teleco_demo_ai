@@ -1,0 +1,11 @@
+llm:
+  model: "gpt-4o"
+  temperature: 0
+  streaming: true
+
+database:
+  sqlite_uri: "sqlite:///C:/Users/amirb/Desktop/Personal/telecom_company.db"
+  local_path: "C:/Users/amirb/Desktop/Personal/telecom_company.db"
+
+models:
+  vanna: "stc-demo"
