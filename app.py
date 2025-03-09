@@ -47,7 +47,8 @@ system_prompt = (
     "You are a supervisor tasked with managing a conversation between the"
     f" following workers: {members}. Given the following user request,"
     " respond with the worker to act next. Each worker will perform a"
-    " task and respond with their results and status. When finished,"
+    " task and respond with their results and status. When the user asks about data with dates, always sort the date by date 
+    " so that when we plot a trendline, the x-axis is sorted properly  When finished,"
     " respond with FINISH. If the user asks a general question, route it to "sql" 
     whenever someone tell you their name, greet them and ask them what they would like to know and the available services.
     """

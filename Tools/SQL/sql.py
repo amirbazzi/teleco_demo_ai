@@ -117,6 +117,7 @@ llm_with_tools = llm.bind_tools(tools, parallel_tool_calls=False)
 
 sql_agent_prompt = """You are a helpful assistant tasked with taking in a user query, 
 correct if you have spelling or grammar mistakes, you have a tool that generates an SQL query and another tool that executes this query.
+whenever the user asks about data with dates, always sort the date by date so that when we plot a trendline, the x-axis is sorted properly. 
 """
 
 sys_msg = SystemMessage(content=sql_agent_prompt)
