@@ -28,7 +28,7 @@ from langchain_core.messages import HumanMessage
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
-
+from langchain_core.prompts import ChatPromptTemplate
 
 from typing import Literal
 from typing_extensions import TypedDict
@@ -37,20 +37,177 @@ from langgraph.graph import MessagesState, END
 from langgraph.types import Command
 import chainlit as cl
 
-members = ["researcher", "coder", "rca", "sql"]
+
+from pydantic import BaseModel, Field
+from typing import List, Optional
+import plotly.graph_objects as go
+from langchain_core.output_parsers import PydanticOutputParser
+
+# Define structured output model using Pydantic v2 syntax
+class Trace(BaseModel):
+    type: str = Field(..., description="Plot type (bar, line, scatter, etc.)")
+    x: List[str] = Field(..., description="X-axis data")
+    y: List[float] = Field(..., description="Y-axis values")
+    name: Optional[str] = None
+    mode: Optional[str] = None
+
+class Layout(BaseModel):
+    title: str = Field(..., description="Chart title")
+    # Remove default value from the schema to avoid the error:
+    template: Optional[str] = Field(None, description="Plot template")
+    xaxis_title: Optional[str] = None
+    yaxis_title: Optional[str] = None
+
+class FigureModel(BaseModel):
+    data: List[Trace]
+    layout: Layout
+
+# Create parser with proper schema handling
+parser = PydanticOutputParser(pydantic_object=FigureModel)
+format_instructions = parser.get_format_instructions()
+
+viz_prompt = """
+You are a data visualization expert. Generate a Plotly figure based on the user query.
+
+Follow these rules:
+1. Use appropriate chart types:
+   - Bar charts for comparisons
+   - Line charts for trends
+   - Pie charts for proportions
+2. Use placeholder data when needed
+3. Add clear labels and titles
+
+User Query: {user_query}
+
+Output Format:
+{format_instructions}
+"""
+
+# Create prompt template with proper variables
+viz_processor_prompt = ChatPromptTemplate.from_messages([
+    ("system", viz_prompt),
+    ("human", "User Query: {user_query}")
+]).partial(format_instructions=format_instructions)
+
+# Combine the prompt and LLM
+viz_llm = ChatOpenAI(model="gpt-4o", temperature=0.2)
+structured_viz_processor = viz_llm.with_structured_output(FigureModel)
+viz_processor = viz_processor_prompt | structured_viz_processor
+
+# Function to convert Pydantic model to Plotly Figure
+def create_plotly_figure(figure_model: FigureModel) -> go.Figure:
+    """Convert the Pydantic model to a Plotly Figure object"""
+    fig = go.Figure()
+    
+    for trace in figure_model.data:
+        if trace.type == 'scatter':
+            fig.add_trace(go.Scatter(
+                x=trace.x,
+                y=trace.y,
+                mode=trace.mode,
+                name=trace.name,
+            ))
+        elif trace.type == 'bar':
+            fig.add_trace(go.Bar(
+                x=trace.x,
+                y=trace.y,
+                name=trace.name
+            ))
+        elif trace.type == 'pie':
+            fig.add_trace(go.Pie(
+                labels=trace.x,
+                values=trace.y,
+                name=trace.name
+            ))
+    
+    # Handle the default template here
+    template = figure_model.layout.template if figure_model.layout.template is not None else "plotly_white"
+    
+    fig.update_layout(
+        title=figure_model.layout.title,
+        template=template,
+        xaxis_title=figure_model.layout.xaxis_title,
+        yaxis_title=figure_model.layout.yaxis_title
+    )
+    
+    return fig
+
+@tool
+def query_to_figure(user_query: str):
+    """
+    Takes a user query describing a visualization and returns a Plotly figure.
+    
+    This function:
+      1. Invokes the viz_processor with the user query to get a figure model.
+      2. Removes any disallowed default value from the template property.
+      3. Converts the cleaned figure model into a Plotly figure.
+    
+    Parameters:
+        user_query (str): The query describing the desired plot.
+    
+    Returns:
+        plotly.graph_objects.Figure: The generated Plotly figure.
+    """
+    # Generate the figure model from the user query using the viz_processor
+    figure_model = viz_processor.invoke({"user_query": user_query})
+    
+    # Fix the schema issue: Remove the 'default' key from the 'template' property if it exists.
+    if "template" in figure_model and isinstance(figure_model["template"], dict):
+        figure_model["template"].pop("default", None)
+    
+    # Convert the cleaned figure model into a Plotly figure
+    fig = create_plotly_figure(figure_model)
+
+
+    figure_path = 'figure.json'
+
+
+    pio.write_json(fig, figure_path)
+
+
+    print("DEBUG GENERATE FIGURE PLOTTER ============ ")
+
+    if fig:
+        print("Plot has been created successfully")
+
+
+
+
+
+
+
+members = ["researcher", "rca", "sql", "plotter"]
 # Our team supervisor is an LLM node. It just picks the next agent to process
 # and decides when the work is completed
 options = members + ["FINISH"]
 
+
+
 system_prompt = (
     """
-    "You are a supervisor tasked with managing a conversation between the"
+    "
+
+    YOU ARE AN AI ASSISTANT IN STC, stc, SAUDI TELECOM COMPANY. 
+    You are a supervisor tasked with managing a conversation between the"
     f" following workers: {members}. Given the following user request,"
     " respond with the worker to act next. Each worker will perform a"
     " task and respond with their results and status. When the user asks about data with dates, always sort the date by date 
     " so that when we plot a trendline, the x-axis is sorted properly  When finished,"
-    " respond with FINISH. If the user asks a general question, route it to "sql" 
+    " respond with FINISH. 
+    
+    If the user asks a general question, route it to "sql" 
     whenever someone tell you their name, greet them and ask them what they would like to know and the available services.
+    whenever the user asks:
+    "what is the revenue of stc based on th db" or any other question similar
+    you should respond with a query to the database to get the overall revenue of stc (which is the company you are the assistant to, not the client) which is the sum of revenue. (stc is not a client)
+
+
+
+    whenevr you use the researcher, go back to supervisor after the researcher is done and be ready to use the database. DONT GET STUCK IN THE RESEARCHER NODE
+    whenever the user asks to plot, DONT USE MATPLOTLIB, use PLOTLY instead.
+
+    for plots use plotly
+
     """
     )
 
@@ -131,25 +288,44 @@ def define_graph():
             },
             goto= END,
         )
+    
 
 
+    plot_agent = create_react_agent(llm, tools=[query_to_figure])
 
-    def code_node(state: State) -> Command[Literal["supervisor"]]:
-        result = code_agent.invoke(state)
+
+    def plotter_node(state: State) -> Command[Literal["supervisor"]]:
+        result = plot_agent.invoke(state)
+        
         return Command(
             update={
                 "messages": [
-                    HumanMessage(content=result["messages"][-1].content, name="coder")
+                    HumanMessage(content=result["messages"][-1].content, name="plotter")
                 ]
             },
-            goto= END,
+            goto=END,
         )
+
+
+
+    # def code_node(state: State) -> Command[Literal["supervisor"]]:
+    #     result = code_agent.invoke(state)
+    #     return Command(
+    #         update={
+    #             "messages": [
+    #                 HumanMessage(content=result["messages"][-1].content, name="coder")
+    #             ]
+    #         },
+    #         goto= END,
+    #     )
 
     builder = StateGraph(State)
     builder.add_edge(START, "supervisor")
     builder.add_node("supervisor", supervisor_node)
     builder.add_node("researcher", research_node)
-    builder.add_node("coder", code_node)
+    # builder.add_node("coder", code_node)
+    builder.add_node("plotter", plotter_node)
+
     builder.add_node("rca", rca_node)
     builder.add_node("sql", sql_node)
 

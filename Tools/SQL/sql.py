@@ -21,6 +21,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 
 # Initialize Vanna Model
 vn = VannaDefault(model=VANNA_MODEL_NAME, api_key=VANNA_API_KEY)
+# Sometimes you may want to add documentation about your business terminology or definitions.
+
 
 # --------------------------
 # 📌 Generate SQL Query Tool
@@ -88,7 +90,12 @@ def execute_sql_query(sql_query: str, user_query:str) -> List[Tuple]:
         plotly_code= plotly_code,
         df=rows)
         
+        print("DEBUG GENERATE FIGURE CODE ============ 1")
+        print(plotly_code)
         print("DEBUG GENERATE FIGURE ============ 1")
+        print(fig)
+
+
         pio.write_json(fig, figure_path)
         print("DEBUG GENERATE FIGURE ============ 2")
         logging.info(f"Executed query successfully. Retrieved {len(rows)} rows.")
@@ -116,8 +123,12 @@ llm_with_tools = llm.bind_tools(tools, parallel_tool_calls=False)
 
 
 sql_agent_prompt = """You are a helpful assistant tasked with taking in a user query, 
-correct if you have spelling or grammar mistakes, you have a tool that generates an SQL query and another tool that executes this query.
+correct if you have spelling or grammar mistakes, 
+you have a tool that generates an SQL query and another tool that executes this query.
 whenever the user asks about data with dates, always sort the date by date so that when we plot a trendline, the x-axis is sorted properly. 
+- whenever asked to find the total or overall of a metric, always return the sum of that metric over the speciified time period.
+- whenever someones asks: what is the total revenue in 2024? DONT EVER ANSWER by stating each data point, instead SUM ALL in that time period
+
 """
 
 sys_msg = SystemMessage(content=sql_agent_prompt)
@@ -170,7 +181,7 @@ def database_tool(user_query: Annotated[str, "Database tool extraction tool"]):
 # Show
 # display(Image(sql_graph.get_graph(xray=True).draw_mermaid_png()))
 
-# messages = [HumanMessage(content="what are the overall sales in the 2023 by segment?")]
+# messages = [HumanMessage(content="what are the overall sales of stc?")]
 
 # messages = sql_graph.invoke({"messages": messages})
 # for m in messages['messages']:

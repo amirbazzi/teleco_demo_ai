@@ -193,8 +193,8 @@ def perform_rca_analysis(state: RCAState):
     # Build the function call
     result_df = perform_root_cause_analysis(
         df=extracted_df,
-        current_period=int(args.previous_period),  # Convert to integer if needed
-        previous_period=int(args.current_period),  # Convert to integer if needed
+        current_period=int(args.current_period),  # Convert to integer if needed
+        previous_period=int(args.previous_period),  # Convert to integer if needed
         kpi=args.kpi,
         levels=args.levels,
         calculation="sum",
