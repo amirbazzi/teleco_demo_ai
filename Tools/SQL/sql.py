@@ -60,13 +60,14 @@ def generate_sql_query(user_query: str) -> str:
 # --------------------------
 
 @tool("execute_sql_query", return_direct=True)
-def execute_sql_query(sql_query: str, user_query:str) -> List[Tuple]:
+def execute_sql_query(sql_query: str, user_query: str) -> List[Tuple]:
     """
     Executes a given SQL query on an SQLite database and fetches the results.
-
+    
     Args:
         sql_query (str): The SQL query string to execute.
-
+        user_query (str): The user's query for generating plotly code.
+    
     Returns:
         List[Tuple]: A list of tuples containing the rows returned by the SQL query.
     """
@@ -79,31 +80,36 @@ def execute_sql_query(sql_query: str, user_query:str) -> List[Tuple]:
         # Execute the SQL query
         rows = vn.run_sql(sql_query)
 
- 
-        plotly_code = vn.generate_plotly_code(
-        question=user_query,
-        sql=sql_query,
-        df=rows)
-
-        figure_path = 'figure.json'
-        fig = vn.get_plotly_figure(
-        plotly_code= plotly_code,
-        df=rows)
+        # Check if the returned table has more than one row.
+        # If it only has one row, skip plotting.
+        if len(rows) > 1:
+            plotly_code = vn.generate_plotly_code(
+                question=user_query,
+                sql=sql_query,
+                df=rows
+            )
+            figure_path = 'figure.json'
+            fig = vn.get_plotly_figure(
+                plotly_code=plotly_code,
+                df=rows
+            )
+            
+            print("DEBUG GENERATE FIGURE CODE ============ 1")
+            print(plotly_code)
+            print("DEBUG GENERATE FIGURE ============ 1")
+            print(fig)
+            
+            pio.write_json(fig, figure_path)
+            print("DEBUG GENERATE FIGURE ============ 2")
+        else:
+            logging.info("Only one row returned. Skipping plot generation.")
         
-        print("DEBUG GENERATE FIGURE CODE ============ 1")
-        print(plotly_code)
-        print("DEBUG GENERATE FIGURE ============ 1")
-        print(fig)
-
-
-        pio.write_json(fig, figure_path)
-        print("DEBUG GENERATE FIGURE ============ 2")
         logging.info(f"Executed query successfully. Retrieved {len(rows)} rows.")
         return rows
 
     except Exception as e:
-        logging.error(f"Error executing SQL query: {e}")
-        return f"Error: Failed to execute SQL query - {str(e)}"
+        logging.error(f"Error executing query: {e}")
+        raise
 
 # --------------------------
 # 📌 LLM Binding with Tools

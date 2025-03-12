@@ -107,45 +107,77 @@ def form_user_query(state: RCAState) -> str:
 
     return {'formatted_user_query': user_query}
 
+import pandas as pd
+from sqlalchemy import create_engine
+
+# This assumes your SQLDatabase instance provides a SQLAlchemy engine.
+engine = create_engine("sqlite:///C:/Users/amirb/Desktop/Personal/telecom_company.db")
+
+# Load lookup tables from the database.
+df_products = pd.read_sql("SELECT * FROM products", engine)
+df_segments = pd.read_sql("SELECT * FROM segments", engine)
+df_clients  = pd.read_sql("SELECT * FROM clients", engine)
+df_sectors  = pd.read_sql("SELECT * FROM sectors", engine)
+
+
 
 # Node 4
 def generate_and_execute(state: RCAState):
     """
-    Generates and executes an SQL query once RCA arguments are complete.
-
-    Args:
-        state (Dict[str, Any]): Contains 'formatted_user_query' for SQL generation.
-
-    Returns:
-        Dict[str, Any]: Extracted DataFrame in dictionary format.
+    generate a sql query once the arguments of the RCA are complete. take as an input the formatted message which start with "Extract, then execute it"
     """
     try:
-        logging.info("--- GENERATING SQL QUERY ---")
+        print("---GENERATE QUERY---")
+        user_query = state['formatted_user_query']
+        vn.connect_to_sqlite(r"C:\Users\amirb\Desktop\Personal\telecom_company.db")
+        sql_query =  vn.generate_sql(question=user_query, allow_llm_to_see_data=True)
         
-        # Extract user query
-        user_query = state.get("formatted_user_query", "")
-        if not user_query:
-            logging.error("No user query provided in state.")
-            return {"error": "No user query provided."}
-
-        # Establish database connection
-        sqlite_path = DB_PATH_RAW  # Loaded from config
-        vn.connect_to_sqlite(sqlite_path)
-
-        # Generate SQL Query
-        sql_query = vn.generate_sql(question=user_query, allow_llm_to_see_data=True)
-        logging.info(f"Generated SQL Query: {sql_query}")
-
-        # Execute SQL Query
-        logging.info("--- EXECUTING QUERY ---")
+        print("---EXECUTE QUERY---")
         extracted_df = vn.run_sql(sql_query)
-
-        # Process Data (Add 'Year' Column If Needed)
         extracted_df = add_year_column_from_date(extracted_df)
 
-        logging.info(f"Extracted {len(extracted_df)} records.")
+
+
+        print(f"{extracted_df.columns}")
+        if 'SegmentID' in extracted_df.columns:
+            # Assuming your segments table has columns "SegmentID" and "SegmentName"
+            extracted_df = extracted_df.merge(
+                df_segments[['SegmentID', 'SegmentName']],
+                on='SegmentID',
+                how='left'
+            )
+            extracted_df.drop('SegmentID', axis=1, inplace=True)
+
+
+        if 'ProductID' in extracted_df.columns:
+            # Assuming your products table has columns "ProductID" and "ProductName"
+            extracted_df = extracted_df.merge(
+                df_products[['ProductID', 'ProductName']],
+                on='ProductID',
+                how='left'
+            )
+            extracted_df.drop('ProductID', axis=1, inplace=True)
+        
+        if 'ClientID' in extracted_df.columns:
+            # Assuming your clients table has columns "ClientID" and "ClientName"
+            extracted_df = extracted_df.merge(
+                df_clients[['ClientID', 'ClientName']],
+                on='ClientID',
+                how='left'
+            )
+            extracted_df.drop('ClientID', axis=1, inplace=True)
+
+        if 'SectorID' in extracted_df.columns:
+            extracted_df = extracted_df.merge(
+                df_sectors[['SectorID', 'SectorName']],
+                on='SectorID',
+                how='left'
+            )
+            extracted_df.drop('SectorID', axis=1, inplace=True)
+
+        print(extracted_df)
         return {"df_extracted": extracted_df.to_dict(orient="records")}
-    
+
     except Exception as e:
         logging.error(f"Error in query execution: {e}")
         return {"error": f"Failed to execute query: {str(e)}"}
@@ -167,7 +199,25 @@ def perform_rca_analysis(state: RCAState):
     
     # Retrieve arguments and data from the state
     rca_args = state["rca_args"]
+    print(rca_args)
+
+    # Define a mapping from ID column names to name column names
+    id_to_name_mapping = {
+        "SegmentID": "SegmentName",
+        "ProductID": "ProductName",
+        "ClientID": "ClientName",
+        "SectorID": "SectorName"
+    }
+    
+    # Update the levels: for each level in rca_args.levels,
+    # if it is one of the ID columns, replace it with the corresponding name column
+    rca_args.levels = [id_to_name_mapping.get(level, level) for level in rca_args.levels]
+    print("DEBUG ============== AFTER MAPPING")
+    print(rca_args)
+
+
     extracted_df = pd.DataFrame(state["df_extracted"])
+    #extracted_df = state["df_extracted"]
     
     # Now check DataFrame emptiness
     if extracted_df is None or extracted_df.empty:  # <-- Valid for DataFrames
@@ -179,16 +229,7 @@ def perform_rca_analysis(state: RCAState):
     args = rca_args.copy()
     
     # Map thresholds dictionary to a list in the same order as the levels
-    #thresholds_list = [int(args.thresholds.get(level, 0) or 0) for level in args.levels]
-
-    thresholds_list = []
-    for level in args.levels:
-        value = args.thresholds.get(level, 0) or 0  # Default to 0 if empty or None
-        try:
-            thresholds_list.append(int(value))
-        except ValueError:
-            logging.warning(f"Invalid threshold value '{value}' for level '{level}', defaulting to 0.")
-            thresholds_list.append(0)
+    thresholds_list = [int(args.thresholds.get(level, 0)) for level in args.levels]
     
     # Build the function call
     result_df = perform_root_cause_analysis(
@@ -203,11 +244,12 @@ def perform_rca_analysis(state: RCAState):
     )
 
 
-    #rca_answer_analysis = rca_answer_processor.invoke({"dataframe": result_df})
     rca_answer_analysis = rca_answer_processor(result_df)
 
 
     return {"rca_result" : rca_answer_analysis}
+
+
 
 
 #---------------------------------------------------#
@@ -265,5 +307,7 @@ def rca_subgraph_tool(
     rca_test = rca.invoke({"user_query":user_query})
     return rca_test
 
+# rca_test = rca.invoke({"user_query":"tell me what cause the revenue incerase from 2023 to 2024 by segment and product "})
 
-#print(rca_subgraph_tool("tell me whta cause the revenue incerase in 2024 cpmared to 2023 by segment"))
+
+# print(rca_test)

@@ -42,6 +42,19 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 import plotly.graph_objects as go
 from langchain_core.output_parsers import PydanticOutputParser
+from langgraph.graph import START, StateGraph
+from langgraph.prebuilt import tools_condition
+from langgraph.prebuilt import ToolNode
+from IPython.display import Image, display
+
+import plotly.express as px
+import plotly.io as pio
+from langchain_core.output_parsers import PydanticOutputParser
+
+from pydantic import BaseModel, Field
+from typing import List, Optional
+import plotly.graph_objects as go
+from langchain_core.messages import HumanMessage, SystemMessage
 
 # Define structured output model using Pydantic v2 syntax
 class Trace(BaseModel):
@@ -168,17 +181,59 @@ def query_to_figure(user_query: str):
     print("DEBUG GENERATE FIGURE PLOTTER ============ ")
 
     if fig:
-        print("Plot has been created successfully")
+        plot_status = "Plot has been created successfully"
+        return plot_status
 
 
 
 
+# Bind tools with LLM
+llm = ChatOpenAI(model="gpt-4o")
+llm_with_plotting_tool = llm.bind_tools([query_to_figure], parallel_tool_calls=False)
+
+
+plotting_agent_prompt = """You are a helpful assistant tasked with plotting based on a user query, use plotly always"""
+
+sys_msg = SystemMessage(content=plotting_agent_prompt)
+
+
+# Node
+def plotting_assistant(state: MessagesState):
+   return {"messages": [llm_with_plotting_tool.invoke([sys_msg] + state["messages"])]}
+
+
+# Graph
+plotting = StateGraph(MessagesState)
+
+# Define nodes: these do the work
+plotting.add_node("plotting_agent", plotting_assistant)
+plotting.add_node("tools", ToolNode([query_to_figure]))
+
+# Define edges: these determine how the control flow moves
+plotting.add_edge(START, "plotting_agent")
+plotting.add_conditional_edges(
+    "plotting_agent",
+    # If the latest message (result) from assistant is a tool call -> tools_condition routes to tools
+    # If the latest message (result) from assistant is a not a tool call -> tools_condition routes to END
+    tools_condition,
+)
+plotting.add_edge("tools", "plotting_agent")
+plotting_graph = plotting.compile()
+
+
+# NODE 2
+@tool
+def plotting_tool(user_query: Annotated[str, "Plotting tool"]):
+    """ 
+    Use this tool to plot data 
+    """
+    plotting_result = plotting_graph.invoke({"messages": user_query})
+    return plotting_result
 
 
 
 members = ["researcher", "rca", "sql", "plotter"]
-# Our team supervisor is an LLM node. It just picks the next agent to process
-# and decides when the work is completed
+
 options = members + ["FINISH"]
 
 
@@ -194,14 +249,19 @@ system_prompt = (
     " task and respond with their results and status. When the user asks about data with dates, always sort the date by date 
     " so that when we plot a trendline, the x-axis is sorted properly  When finished,"
     " respond with FINISH. 
+
+    if "plotter" was called, you should respond by "The plotting tool was activated and this is the result".
+
+    NEVER EVER give the user a code snippet when the user asks for a plot.
+
+    When asked "What are the key services offered by STC across its various business segments?", use the database.
     
     If the user asks a general question, route it to "sql" 
     whenever someone tell you their name, greet them and ask them what they would like to know and the available services.
     whenever the user asks:
     "what is the revenue of stc based on th db" or any other question similar
-    you should respond with a query to the database to get the overall revenue of stc (which is the company you are the assistant to, not the client) which is the sum of revenue. (stc is not a client)
-
-
+    you should respond with a query to the database to get the overall revenue of stc (which is the company you are the assistant to, not the client)
+    which is the sum of revenue. (stc is not a client)
 
     whenevr you use the researcher, go back to supervisor after the researcher is done and be ready to use the database. DONT GET STUCK IN THE RESEARCHER NODE
     whenever the user asks to plot, DONT USE MATPLOTLIB, use PLOTLY instead.
@@ -244,7 +304,13 @@ def define_graph():
         messages = [
             {"role": "system", "content": system_prompt},
         ] + state["messages"]
+
+        print(f"DEBUG SUPERVISOR NODE ============= {messages}")
+
         response = llm.with_structured_output(Router).invoke(messages)
+
+        print(f"DEBUG SUPERVISOR NODE ============= {response}")
+
         goto = response["next"]
         if goto == "FINISH":
             goto = END
@@ -291,11 +357,13 @@ def define_graph():
     
 
 
-    plot_agent = create_react_agent(llm, tools=[query_to_figure])
+    plot_agent = create_react_agent(llm, tools=[plotting_tool])
 
 
     def plotter_node(state: State) -> Command[Literal["supervisor"]]:
         result = plot_agent.invoke(state)
+
+        print(f'DEBUG PLOTTER NODE ============================ {result}')
         
         return Command(
             update={
