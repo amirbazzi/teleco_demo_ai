@@ -12,11 +12,14 @@ from Tools.RCA.args_mapping import args_processor
 from Tools.RCA.rca_analysis import rca_answer_processor
 from Tools.RCA.rca_base_function import filter_by_year, apply_filters, calculate_overall_kpi, calculate_kpi_changes, calculate_grouped_kpi_changes, filter_and_sort_by_threshold, calculate_ratio, perform_root_cause_analysis
 from IPython.display import Image, display
+from helpers.database import get_sqlite_connection
+
+
 
 
 import logging
 from helpers.database import get_sqlite_connection
-from helpers.config import DB_PATH_RAW, VANNA_API_KEY
+from helpers.config import DB_PATH_RAW, VANNA_API_KEY, DB_PATH_SQLITE
 from helpers.utilities import add_year_column_from_date
 from vanna.remote import VannaDefault
 from typing import Dict, Any, Annotated, Literal
@@ -111,7 +114,7 @@ import pandas as pd
 from sqlalchemy import create_engine
 
 # This assumes your SQLDatabase instance provides a SQLAlchemy engine.
-engine = create_engine("sqlite:///C:/Users/amirb/Desktop/Personal/telecom_company.db")
+engine = create_engine(DB_PATH_SQLITE)
 
 # Load lookup tables from the database.
 df_products = pd.read_sql("SELECT * FROM products", engine)
@@ -119,7 +122,7 @@ df_segments = pd.read_sql("SELECT * FROM segments", engine)
 df_clients  = pd.read_sql("SELECT * FROM clients", engine)
 df_sectors  = pd.read_sql("SELECT * FROM sectors", engine)
 
-
+ 
 
 # Node 4
 def generate_and_execute(state: RCAState):
@@ -129,7 +132,7 @@ def generate_and_execute(state: RCAState):
     try:
         print("---GENERATE QUERY---")
         user_query = state['formatted_user_query']
-        vn.connect_to_sqlite(r"C:\Users\amirb\Desktop\Personal\telecom_company.db")
+        vn.connect_to_sqlite(DB_PATH_RAW)
         sql_query =  vn.generate_sql(question=user_query, allow_llm_to_see_data=True)
         
         print("---EXECUTE QUERY---")

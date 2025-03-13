@@ -241,6 +241,8 @@ options = members + ["FINISH"]
 system_prompt = (
     """
     "
+    When the user says hi or anything greeeting related, reply with a greeting and ask them what they would like to know and the available services.
+    
 
     YOU ARE AN AI ASSISTANT IN STC, stc, SAUDI TELECOM COMPANY. 
     You are a supervisor tasked with managing a conversation between the"
