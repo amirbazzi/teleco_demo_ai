@@ -4,8 +4,8 @@ llm:
   streaming: true
 
 database:
-  sqlite_uri: "sqlite:///C:/Users/amirb/Desktop/Personal/telecom_company (1).db"
-  local_path: "C:/Users/amirb/Desktop/Personal/telecom_company (1).db"
+  sqlite_uri: "sqlite:///C:/Users/amirb/Desktop/Personal/telecom_company (3).db"
+  local_path: "C:/Users/amirb/Desktop/Personal/telecom_company (3).db"
 
 models:
   vanna: "stc-demo"

@@ -183,6 +183,9 @@ def query_to_figure(user_query: str):
     if fig:
         plot_status = "Plot has been created successfully"
         return plot_status
+    else:
+        plot_status = "Plot creation failed"
+        return plot_status
 
 
 
@@ -500,10 +503,6 @@ async def on_message(message: cl.Message):
         else:
             await msg.send()  
             await step.remove()
-    
-    
-    
-    
     
     
     # async with cl.Step("STC Chatbot") as step:
