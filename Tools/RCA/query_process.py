@@ -40,7 +40,7 @@ If the query requires RCA, extract the following arguments:
 1. **Current Period**: The year for the current period you are analyzing.
 2. **Previous Period**: The year for the previous period you want to compare against.
 3. **KPI**: The key performance indicator you want to analyze.
-4. **Levels**: The grouping hierarchy for the analysis.
+4. **Levels**: The grouping hierarchy for the analysis. if multiple levels are given from the user, you should put them together 
 5. **Calculation Method** (optional): The aggregation method (default is "sum").
 6. **Thresholds** (optional): Thresholds for filtering results. (default is 2).
 7. **Service Filter** (optional): Any specific service you want to filter by.
@@ -55,6 +55,27 @@ If any arguments are missing or ambiguous:
 ---
 
 ### Examples:
+
+
+Top Example:
+User Query: "What factors contributed to the increase in STC’s revenue between 2023 and 2024 by segment and product?"
+
+- Step 1 (RCA Required): Yes  
+  Reason: The query aims to uncover the drivers behind a positive revenue change by examining specific business segments and products.
+
+- Step 2 (Extracted Arguments):
+  - Current Period: 2024 (Revenue data for 2024 will be used as the current period.)
+  - Previous Period: 2023 (Revenue data for 2023 serves as the baseline for comparison.)
+  - KPI: Revenue (The key performance indicator under analysis is revenue.)
+  - Levels: Segment, Product (The analysis will break down revenue changes by business segment and product.)
+  - Calculation Method: Sum (Revenue will be aggregated using summation.)
+  - Service Filter: STC (The query specifically pertains to STC’s revenue.)
+
+- Step 3 (Missing Arguments):
+  - is_missing: No
+
+
+
 
 #### Example 1:
 User Query: "Why are we falling short in revenue this year compared to last year?"

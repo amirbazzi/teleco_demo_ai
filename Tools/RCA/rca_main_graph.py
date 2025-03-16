@@ -86,6 +86,8 @@ def rca_args_map(state: RCAState):
     Once we have all the RCA arguments needed, we should map them to the correct column names and return a structured output
     """
     updated_args = args_processor(state['rca_response'])
+    #rca_args = state["rca_args"]
+    print(updated_args)
     return {"rca_args":updated_args}
 
 
@@ -207,9 +209,13 @@ def perform_rca_analysis(state: RCAState):
     # Define a mapping from ID column names to name column names
     id_to_name_mapping = {
         "SegmentID": "SegmentName",
+        "Segments": "SegmentName",
         "ProductID": "ProductName",
+        "Products": "ProductName",
         "ClientID": "ClientName",
-        "SectorID": "SectorName"
+        "Clients": "ClientName",
+        "SectorID": "SectorName",
+        "Sectors": "SectorName"
     }
     
     # Update the levels: for each level in rca_args.levels,
@@ -248,6 +254,10 @@ def perform_rca_analysis(state: RCAState):
 
 
     rca_answer_analysis = rca_answer_processor(result_df)
+
+    print("DEBUG ============== RCA ANALYSIS")
+
+    print(rca_answer_analysis)
 
 
     return {"rca_result" : rca_answer_analysis}
