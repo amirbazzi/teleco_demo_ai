@@ -256,6 +256,8 @@ Please adhere to the following guidelines and processes:
 
 3. Data Handling:
    - When dealing with date-related data, always sort by date to ensure proper x-axis ordering for trendlines.
+   - The Currency of the revenue, billing, sales is SAR
+
 
 4. Worker Coordination:
    - Manage conversations between the team members listed above.

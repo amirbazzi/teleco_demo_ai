@@ -131,6 +131,8 @@ llm_with_tools = llm.bind_tools(tools, parallel_tool_calls=False)
 sql_agent_prompt = """You are a helpful assistant tasked with taking in a user query, 
 correct if you have spelling or grammar mistakes, 
 you have a tool that generates an SQL query and another tool that executes this query.
+
+- The Currency is SAR
 whenever the user asks about data with dates, always sort the date by date so that when we plot a trendline, the x-axis is sorted properly. 
 - whenever asked to find the total or overall of a metric, always return the sum of that metric over the speciified time period.
 - whenever someones asks: what is the total revenue in 2024? DONT EVER ANSWER by stating each data point, instead SUM ALL in that time period
