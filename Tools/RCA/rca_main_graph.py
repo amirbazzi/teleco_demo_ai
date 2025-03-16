@@ -238,7 +238,7 @@ def perform_rca_analysis(state: RCAState):
     args = rca_args.copy()
     
     # Map thresholds dictionary to a list in the same order as the levels
-    thresholds_list = [int(args.thresholds.get(level, 0)) for level in args.levels]
+    thresholds_list = [int(args.thresholds.get(level, 0.5)) for level in args.levels]
     
     # Build the function call
     result_df = perform_root_cause_analysis(
@@ -253,7 +253,22 @@ def perform_rca_analysis(state: RCAState):
     )
 
 
+    result_df = result_df.sort_values(by=[f"{args.levels[0]}"]).reset_index(drop=True)
+
+    result_df = result_df.groupby([f"{args.levels[0]}", "depth_level"],dropna=False, as_index=False).apply(lambda x: x).reset_index(drop=True)
+
+
+
+
+
+
     rca_answer_analysis = rca_answer_processor(result_df)
+
+    print("DEBUG ============== RCA DATASET")
+    print(result_df)
+    result_df.to_excel("rca_result.xlsx")
+
+
 
     print("DEBUG ============== RCA ANALYSIS")
 

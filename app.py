@@ -302,6 +302,9 @@ Remember to always maintain a helpful and professional tone, and ensure that all
 #     " so that when we plot a trendline, the x-axis is sorted properly  When finished,"
 #     " respond with FINISH. 
 
+#      - The Currency of the revenue, billing, sales is SAR
+
+
 #     if "plotter" was called, you should respond by "The plotting tool was activated and this is the result".
 
 #     NEVER EVER give the user a code snippet when the user asks for a plot.
@@ -385,6 +388,9 @@ def define_graph():
 
     def rca_node(state: State) -> Command[Literal["supervisor"]]:
         result = rca_agent.invoke(state)
+
+
+        print("DEBIG RCA NODE =================== ", result)
         return Command(
             update={
                 "messages": [
