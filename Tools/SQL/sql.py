@@ -128,15 +128,51 @@ llm_with_tools = llm.bind_tools(tools, parallel_tool_calls=False)
 #--------------------------------------------------#
 
 
-sql_agent_prompt = """You are a helpful assistant tasked with taking in a user query, 
-correct if you have spelling or grammar mistakes, 
-you have a tool that generates an SQL query and another tool that executes this query.
+sql_agent_prompt = """
+-You are a helpful assistant tasked with taking in a user query, correcting any spelling or grammar mistakes. 
 
-- The Currency is SAR
-whenever the user asks about data with dates, always sort the date by date so that when we plot a trendline, the x-axis is sorted properly. 
-- whenever asked to find the total or overall of a metric, always return the sum of that metric over the speciified time period.
-- whenever someones asks: what is the total revenue in 2024? DONT EVER ANSWER by stating each data point, instead SUM ALL in that time period
+-You have a tool that generates an SQL query and another tool that executes this query.
 
+-You will be working with an SQLite database, so make sure to create the proper SQL syntax to query the database and obtain the required information.
+
+-Additionally, STC (or stc) refers to the company that owns this database. It is considered as a client, service, segment, or sector within the database. When the user asks about revenue, billing, or other data related to any sector, segment, service, or product, you should **not** filter specifically for STC, as it is the company you work for.
+
+-Sales and revenue are often used interchangeably; however, whenever the user refers to sales or revenue, ensure to reference the Revenue column in the Metrics table
+
+-The currency is SAR
+
+-When asked 'which customers declined in revenue in 2024' or anything similar, NEVER use this query:
+    - SELECT Clients.ClientName
+    FROM Clients
+    JOIN Metrics AS m2023 ON Clients.ClientID = m2023.ClientID AND m2023.Date LIKE '2023%'
+    JOIN Metrics AS m2024 ON Clients.ClientID = m2024.ClientID AND m2024.Date LIKE '2024%'
+    WHERE m2024.Revenue < m2023.Revenue
+
+    USE THIS INSTEAD:
+    - WITH Revenue2023 AS (
+            SELECT ClientID, SUM(Revenue) AS Revenue2023
+            FROM Metrics
+            WHERE Date LIKE '%2023%'
+            GROUP BY ClientID
+        ),
+        Revenue2024 AS (
+            SELECT ClientID, SUM(Revenue) AS Revenue2024
+            FROM Metrics
+            WHERE Date LIKE '%2024%'
+            GROUP BY ClientID
+        )
+        SELECT 
+            Clients.ClientName,
+            Revenue2023.Revenue2023,
+            Revenue2024.Revenue2024,
+            (Revenue2024.Revenue2024 - Revenue2023.Revenue2023) AS RevenueDecline
+        FROM Revenue2023
+        JOIN Revenue2024 ON Revenue2023.ClientID = Revenue2024.ClientID
+        JOIN Clients ON Revenue2023.ClientID = Clients.ClientID
+        WHERE Revenue2024.Revenue2024 < Revenue2023.Revenue2023
+        ORDER BY RevenueDecline ASC;
+
+        
 """
 
 sys_msg = SystemMessage(content=sql_agent_prompt)
@@ -189,8 +225,8 @@ def database_tool(user_query: Annotated[str, "Database tool extraction tool"]):
 # Show
 # display(Image(sql_graph.get_graph(xray=True).draw_mermaid_png()))
 
-# messages = [HumanMessage(content="what are the overall sales of stc?")]
+messages = [HumanMessage(content="what are the segments available in the db")]
 
-# messages = sql_graph.invoke({"messages": messages})
-# for m in messages['messages']:
-#     m.pretty_print()
+messages = sql_graph.invoke({"messages": messages})
+for m in messages['messages']:
+    m.pretty_print()

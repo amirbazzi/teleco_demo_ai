@@ -338,4 +338,5 @@ def rca_subgraph_tool(
 # rca_test = rca.invoke({"user_query":"tell me what cause the revenue incerase from 2023 to 2024 by segment and product "})
 
 
+
 # print(rca_test)
