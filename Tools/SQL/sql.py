@@ -77,21 +77,44 @@ def execute_sql_query(sql_query: str, user_query: str) -> List[Tuple]:
         # Connect to SQLite Database
         vn.connect_to_sqlite(DB_PATH_RAW)
 
-        # Execute the SQL query
-        rows = vn.run_sql(sql_query)
+        # # Execute the SQL query
+        # rows = vn.run_sql(sql_query)
+
+        # # Check if the returned table has more than one row.
+        # # If it only has one row, skip plotting.
+        # if len(rows) > 1:
+        #     plotly_code = vn.generate_plotly_code(
+        #         question=user_query,
+        #         sql=sql_query,
+        #         df=rows
+        #     )
+        #     figure_path = 'figure.json'
+        #     fig = vn.get_plotly_figure(
+        #         plotly_code=plotly_code,
+        #         df=rows
+        #     )
+
+        # Execute the SQL query and get results as a DataFrame
+        rows_df = vn.run_sql(sql_query)
+
+        # Round all numeric columns to two decimal places
+        numeric_cols = rows_df.select_dtypes(include=['number']).columns
+        rows_df[numeric_cols] = rows_df[numeric_cols].round(2)
+
+        # Convert DataFrame to list of tuples for the return value
+        rows = [tuple(row) for row in rows_df.to_numpy()]
 
         # Check if the returned table has more than one row.
-        # If it only has one row, skip plotting.
-        if len(rows) > 1:
+        if len(rows_df) > 1:
             plotly_code = vn.generate_plotly_code(
                 question=user_query,
                 sql=sql_query,
-                df=rows
+                df=rows_df  # Use the rounded DataFrame for plotting
             )
             figure_path = 'figure.json'
             fig = vn.get_plotly_figure(
                 plotly_code=plotly_code,
-                df=rows
+                df=rows_df
             )
             
             print("DEBUG GENERATE FIGURE CODE ============ 1")
@@ -140,6 +163,18 @@ sql_agent_prompt = """
 -Sales and revenue are often used interchangeably; however, whenever the user refers to sales or revenue, ensure to reference the Revenue column in the Metrics table
 
 -The currency is SAR
+
+- You MUST ALWAYS compute percentage changes and mathematical operations within the SQL query itself. Never return raw values that require external calculations.
+
+- For percentage differences, generate SQL that directly calculates:
+  ((NewValue - OldValue)/OldValue)*100 AS Result
+
+- Example: When asked "percentage difference between 2023-2024":
+WITH Revenue2023 AS ( SELECT SUM(Revenue) AS Revenue2023 FROM Metrics WHERE Date LIKE '%2023%' ), Revenue2024 AS ( SELECT SUM(Revenue) AS Revenue2024 FROM Metrics WHERE Date LIKE '%2024%' ) SELECT (Revenue2024.Revenue2024 - Revenue2023.Revenue2023) / Revenue2023.Revenue2023 * 100 AS PercentageChange FROM Revenue2023, Revenue2024;
+
+- Return ONLY numerical results. Never show formulas, calculations, or LaTeX.
+
+- If the query returns a single percentage value, present it directly: "The percentage difference is X%"
 
 -When asked 'which customers declined in revenue in 2024' or anything similar, NEVER use this query:
     - SELECT Clients.ClientName
@@ -225,7 +260,7 @@ def database_tool(user_query: Annotated[str, "Database tool extraction tool"]):
 # Show
 # display(Image(sql_graph.get_graph(xray=True).draw_mermaid_png()))
 
-messages = [HumanMessage(content="what are the segments available in the db")]
+messages = [HumanMessage(content="whats total rev in  2024?")]
 
 messages = sql_graph.invoke({"messages": messages})
 for m in messages['messages']:
