@@ -1,5 +1,10 @@
-# Ignore Python virtual environment
+# Python envs & caches
 lang_new_2/
-
 .venv/
 venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+# OS/IDE
+.DS_Store
+.vscode/
