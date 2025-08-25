@@ -53,7 +53,7 @@ edit_message = true
 
 [UI]
 # Name of the assistant.
-name = "STC Chatbot"
+name = "Mobily Chatbot"
 
 # default_theme = "dark"
 

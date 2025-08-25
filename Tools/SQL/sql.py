@@ -3,6 +3,8 @@ import sys
 import os
 import plotly
 import json
+import pandas as pd
+
 # Navigate up two levels to the project root and add it to the sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 import plotly.io as pio
@@ -59,6 +61,8 @@ def generate_sql_query(user_query: str) -> str:
 # 📌 Execute SQL Query Tool
 # --------------------------
 
+
+
 @tool("execute_sql_query", return_direct=True)
 def execute_sql_query(sql_query: str, user_query: str) -> List[Tuple]:
     """
@@ -97,9 +101,14 @@ def execute_sql_query(sql_query: str, user_query: str) -> List[Tuple]:
         # Execute the SQL query and get results as a DataFrame
         rows_df = vn.run_sql(sql_query)
 
-        # Round all numeric columns to two decimal places
+         # Get the list of numeric columns from the DataFrame
         numeric_cols = rows_df.select_dtypes(include=['number']).columns
-        rows_df[numeric_cols] = rows_df[numeric_cols].round(2)
+
+        # Apply conditional rounding: if a value has more than 3 digits, round with 0 decimals; otherwise, round with 1 decimals.
+        for col in numeric_cols:
+            rows_df[col] = rows_df[col].apply(
+                lambda x: round(x, 0) if pd.notnull(x) and abs(x) >= 1000 else round(x, 1)
+            )
 
         # Convert DataFrame to list of tuples for the return value
         rows = [tuple(row) for row in rows_df.to_numpy()]
@@ -243,25 +252,75 @@ sql.add_edge("tools", "sql_agent")
 sql_graph = sql.compile()
 
 # Show
-display(Image(sql_graph.get_graph(xray=True).draw_mermaid_png()))
+#display(Image(sql_graph.get_graph(xray=True).draw_mermaid_png()))
 
 
 # NODE 2
 @tool
 def database_tool(user_query: Annotated[str, "Database tool extraction tool"]):
     """ 
-    Use this tool to extract data from database to help answering a user query about anything related to data
+    Use this tool to extract data from database to help answering a user query about anything related to data.
+    
     """
     print("---SQL PROCESS STARTED---")
     database_result = sql_graph.invoke({"messages": user_query})
     return database_result
 
 
+vn.train(
+    question="whats the percentage change in revenue between 2023 and 2024?", 
+    sql="""
+    SELECT
+  (
+    (
+      SUM(CASE WHEN Date LIKE '%2024%' THEN Revenue ELSE 0 END) -
+      SUM(CASE WHEN Date LIKE '%2023%' THEN Revenue ELSE 0 END)
+    )
+    / NULLIF(SUM(CASE WHEN Date LIKE '%2023%' THEN Revenue ELSE 0 END), 0)
+  ) * 100 AS PercentageChange
+FROM Metrics
+WHERE Date LIKE '%2023%' OR Date LIKE '%2024%';
+"""
+)
+
+vn.train(
+    question="percentage change in revenue between 2023 and 2024?", 
+    sql="""
+    SELECT
+  (
+    (
+      SUM(CASE WHEN Date LIKE '%2024%' THEN Revenue ELSE 0 END) -
+      SUM(CASE WHEN Date LIKE '%2023%' THEN Revenue ELSE 0 END)
+    )
+    / NULLIF(SUM(CASE WHEN Date LIKE '%2023%' THEN Revenue ELSE 0 END), 0)
+  ) * 100 AS PercentageChange
+FROM Metrics
+WHERE Date LIKE '%2023%' OR Date LIKE '%2024%';
+"""
+)
+
+vn.train(
+    question="% change in revenue between 2023 and 2024?", 
+    sql="""
+    SELECT
+  (
+    (
+      SUM(CASE WHEN Date LIKE '%2024%' THEN Revenue ELSE 0 END) -
+      SUM(CASE WHEN Date LIKE '%2023%' THEN Revenue ELSE 0 END)
+    )
+    / NULLIF(SUM(CASE WHEN Date LIKE '%2023%' THEN Revenue ELSE 0 END), 0)
+  ) * 100 AS PercentageChange
+FROM Metrics
+WHERE Date LIKE '%2023%' OR Date LIKE '%2024%';
+"""
+)
+
+
 # Show
 # display(Image(sql_graph.get_graph(xray=True).draw_mermaid_png()))
 
-messages = [HumanMessage(content="whats total rev in  2024?")]
+# messages = [HumanMessage(content="whats the percentage change in revenue between 2023 and 2024?")]
 
-messages = sql_graph.invoke({"messages": messages})
-for m in messages['messages']:
-    m.pretty_print()
+# messages = sql_graph.invoke({"messages": messages})
+# for m in messages['messages']:
+#     m.pretty_print()

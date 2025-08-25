@@ -1,5 +1,7 @@
 import sys
 import os
+
+
 import plotly
 import json
 import plotly.express as px
@@ -18,17 +20,7 @@ from Tools.WEB.websearch import tavily_tool
 from typing import Annotated
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
-
-# Import dynamic company configurations
-from helpers.config import (
-    GPT_MODEL, 
-    COMPANY_NAME, 
-    COMPANY_DISPLAY_NAME,
-    COMPANY_THREAD_ID,
-    COMPANY_GREETING,
-    COMPANY_AUTHOR_NAME,
-    COMPANY_STEP_NAME
-)
+from helpers.config import GPT_MODEL
 
 from langchain_core.messages import HumanMessage
 from langgraph.graph import StateGraph, START, END
@@ -41,6 +33,7 @@ from typing_extensions import TypedDict
 from langgraph.graph import MessagesState, END
 from langgraph.types import Command
 import chainlit as cl
+
 
 from pydantic import BaseModel, Field
 from typing import List, Optional
@@ -59,6 +52,8 @@ from typing import List, Optional
 import plotly.graph_objects as go
 from langchain_core.messages import HumanMessage, SystemMessage
 
+
+
 # Define structured output model using Pydantic v2 syntax
 class Trace(BaseModel):
     type: str = Field(..., description="Plot type (bar, line, scatter, etc.)")
@@ -67,7 +62,7 @@ class Trace(BaseModel):
     name: Optional[str] = None
     mode: Optional[str] = None
 
-class Layout(BaseModel):
+class Layout(BaseModel):    
     title: str = Field(..., description="Chart title")
     # Remove default value from the schema to avoid the error:
     template: Optional[str] = Field(None, description="Plot template")
@@ -110,6 +105,7 @@ viz_llm = ChatOpenAI(model="gpt-4o", temperature=0.2)
 structured_viz_processor = viz_llm.with_structured_output(FigureModel)
 viz_processor = viz_processor_prompt | structured_viz_processor
 
+
 # Helper function to apply conditional rounding
 def round_value(value):
     if isinstance(value, (int, float)):
@@ -117,6 +113,7 @@ def round_value(value):
         # otherwise, round to 1 decimal
         return round(value, 0) if abs(value) >= 1000 else round(value, 1)
     return value
+
 
 # Function to convert Pydantic model to Plotly Figure
 def create_plotly_figure(figure_model: FigureModel) -> go.Figure:
@@ -207,17 +204,24 @@ def query_to_figure(user_query: str):
         plot_status = "Plot creation failed"
         return plot_status
 
+
+
+
+
 # Bind tools with LLM
 llm = ChatOpenAI(model="gpt-4o")
 llm_with_plotting_tool = llm.bind_tools([query_to_figure], parallel_tool_calls=False)
+
 
 plotting_agent_prompt = """You are a helpful assistant tasked with plotting based on a user query, use plotly always"""
 
 sys_msg = SystemMessage(content=plotting_agent_prompt)
 
+
 # Node
 def plotting_assistant(state: MessagesState):
    return {"messages": [llm_with_plotting_tool.invoke([sys_msg] + state["messages"])]}
+
 
 # Graph
 plotting = StateGraph(MessagesState)
@@ -237,6 +241,7 @@ plotting.add_conditional_edges(
 plotting.add_edge("tools", "plotting_agent")
 plotting_graph = plotting.compile()
 
+
 # NODE 2
 @tool
 def plotting_tool(user_query: Annotated[str, "Plotting tool"]):
@@ -255,6 +260,21 @@ from typing import Annotated
 
 from Tools.PDF.gpt_agent_api import gpt_pdf_graph
 
+# @tool
+# def pdf_subgraph_tool(
+#     user_query: Annotated[str, "user query to process for PDF analysis"]):
+#     """
+#     Use this to process if PDF analysis is needed 
+#     """
+#     print("STARTING PDF SUBGRAPH TOOL")
+#     pdf_graph_test = pdf_graph.invoke({"question": user_query})
+#     pdf_graph_test_answer = pdf_graph_test["answer"]
+#     print("DEBUG PDF SUBGRAPH TOOL ============= ", pdf_graph_test_answer)
+#     return pdf_graph_test_answer
+
+
+
+# @tool("pdf_subgraph_tool", return_direct=True)
 def pdf_subgraph_tool(
     user_query: Annotated[str, "User query to process for PDF analysis"]
 ) -> str:
@@ -269,18 +289,24 @@ def pdf_subgraph_tool(
 
     print(f"--- PDF TOOL ANSWER --- {gpt_pdf_ans}")
 
+
     # Safely extract the "answer" field
     return gpt_pdf_ans
 
+    #return result.get("answer", "")
+
+
+
 members = ["researcher", "rca", "sql", "plotter", "pdf"]
+
 options = members + ["FINISH"]
 
-# Dynamic system prompt based on current company
-def get_system_prompt():
-    return f"""
+system_prompt = (
+    """
+    "
     WHEN ASKED ABOUT "whats the percentage change in revenue between 2023 and 2024" DONT SHOW FORMULA EVER.
 
-    When the user says hi or anything greeting related, reply with a greeting and ask them what they would like to know and the available services.
+    When the user says hi or anything greeeting related, reply with a greeting and ask them what they would like to know and the available services.
 
     Follow these guidelines at all times:
     - Do not confuse STC KSA with STC Group
@@ -289,13 +315,13 @@ def get_system_prompt():
     - Only when instructed to use the database, you should use the database tool 
     
 
-    YOU ARE AN AI ASSISTANT IN {COMPANY_NAME} telecom company
-    You are a supervisor tasked with managing a conversation between the
-    following workers: {members}. Given the following user request,
-    respond with the worker to act next. Each worker will perform a
-    task and respond with their results and status. When the user asks about data with dates, always sort the date by date 
-    so that when we plot a trendline, the x-axis is sorted properly  When finished,
-    respond with FINISH. 
+    YOU ARE AN AI ASSISTANT IN Mobily telecom company
+    You are a supervisor tasked with managing a conversation between the"
+    f" following workers: {members}. Given the following user request,"
+    " respond with the worker to act next. Each worker will perform a"
+    " task and respond with their results and status. When the user asks about data with dates, always sort the date by date 
+    " so that when we plot a trendline, the x-axis is sorted properly  When finished,"
+    " respond with FINISH. 
 
     The Currency of the revenue, billing, sales is SAR
 
@@ -305,6 +331,8 @@ def get_system_prompt():
     NEVER EVER give the user a code snippet when the user asks for a plot.
 
     NEVER EVER mention the way you calculated percentage or the formula when the user asks for percentage change.
+
+        
 
     When asked "What are the key services offered by STC across its various business segments?", use the database.
     
@@ -323,6 +351,8 @@ def get_system_prompt():
     WHEN ASKED ABOUT "whats the percentage change in revenue between 2023 and 2024" DONT SHOW FORMULA EVER.
 
     The instructions for the pdf member are as follow:
+
+
 
     You are a specialized insights agent focused on analyzing publicly available annual analyst presentations and investor reports from Saudi telecom operators — STC, Zain, and Mobily.
 
@@ -353,37 +383,42 @@ def get_system_prompt():
     Base your response strictly on the CONTEXT section. Do not rely on prior knowledge or external sources.
     Clearly cite the source PDF name and page number for every data point in this format: (Source: [source_pdf], Page: [page]).
     If the context does not contain the necessary information, respond with:  
-    "The requested information is not available in the provided analyst presentations. Would you like to switch to {COMPANY_NAME}'s internal database for a deeper root cause analysis?"
+    “The requested information is not available in the provided analyst presentations. Would you like to switch to STC KSA’s internal database for a deeper root cause analysis?”
 
     Comparison logic:
     When comparing operators (e.g., STC vs Zain), always use analyst presentation data only. Do not reference internal data sources.
-    Use {COMPANY_NAME} internal data (RCA mode) **only if**:
-    - The question pertains specifically to {COMPANY_NAME}
+    Use STC internal data (RCA mode) **only if**:
+    - The question pertains specifically to STC KSA
     - The PDF lacks sufficient information
     - The user explicitly agrees to switch to internal analysis
 
     Examples:
-    1. User asks: "Why did {COMPANY_NAME}'s enterprise revenue decline in 2024?"  
+    1. User asks: “Why did STC’s enterprise revenue decline in 2024?”  
     → The analyst presentation shows that EBU revenue declined by 7.7%, mainly due to a drop in public sector revenue from SAR 9.87 billion to SAR 8.48 billion (−14.1%), partially offset by private sector revenue growth from SAR 4.72 billion to SAR 4.99 billion (+5.7%)  
     (Source: earnings-presentation2024en.pdf, Page: 10).  
     Provide this breakdown. Then say:  
-    "If you'd like to explore more detailed internal performance metrics, I can switch to {COMPANY_NAME}'s internal database for a deeper root cause analysis."
+    “If you’d like to explore more detailed internal performance metrics, I can switch to STC KSA’s internal database for a deeper root cause analysis.”
 
-    2. User asks: "Compare postpaid subscriber growth across STC, Zain, and Mobily."  
+    2. User asks: “Compare postpaid subscriber growth across STC, Zain, and Mobily.”  
     → Use subscriber metrics directly from analyst presentations. Do not switch to internal data.
 
-    3. User asks: "What was {COMPANY_NAME}'s churn rate in the enterprise segment?"  
+    3. User asks: “What was STC’s churn rate in the enterprise segment?”  
     → If this information is not in the context, respond with:  
-    "The requested information is not available in the provided analyst presentations. Would you like to switch to {COMPANY_NAME}'s internal database for a deeper root cause analysis?"
+    “The requested information is not available in the provided analyst presentations. Would you like to switch to STC KSA’s internal database for a deeper root cause analysis?”
 
     Never do:
     Never infer, guess, or supplement insights beyond what is explicitly stated in the provided context.
-    Never pull or refer to internal {COMPANY_NAME} data unless the user confirms and the question requires internal depth.
+    Never pull or refer to internal STC KSA data unless the user confirms and the question requires internal depth.
+
     """
+    )
+
 
 class Router(TypedDict):
     """Worker to route to next. If no workers needed or extra arguments needed for a tool, route to FINISH."""
+
     next: Literal[*options]
+
 
 class State(MessagesState):
     next: str
@@ -393,6 +428,7 @@ def define_graph():
     llm = ChatOpenAI(temperature=0, model=GPT_MODEL, streaming=True)
 
     code_agent = create_react_agent(llm, tools=[python_repl_tool])
+
 
     research_agent = create_react_agent(
         llm, tools=[tavily_tool]
@@ -404,8 +440,10 @@ def define_graph():
 
     sql_agent = create_react_agent(
         llm, tools=[database_tool],
-        prompt="if the user asked for the percentage, dont show the formula, just show the result"
+            prompt="if the user asked for the percentage, dont show the formula, just show the result"
+
     )
+
 
     pdf_agent = create_react_agent(
         llm, tools=[pdf_subgraph_tool],
@@ -413,9 +451,6 @@ def define_graph():
     )
 
     def supervisor_node(state: State) -> Command[Literal[*members, "__end__"]]:
-        # Use dynamic system prompt
-        system_prompt = get_system_prompt()
-        
         messages = [
             {"role": "system", "content": system_prompt},
         ] + state["messages"]
@@ -432,6 +467,8 @@ def define_graph():
 
         return Command(goto=goto, update={"next": goto})
 
+
+
     def research_node(state: State):
         result = research_agent.invoke(state)
         return Command(
@@ -443,8 +480,10 @@ def define_graph():
             goto= END,
         )
 
+
     def rca_node(state: State):
         result = rca_agent.invoke(state)
+
 
         print("DEBUG RCA NODE =================== ", result)
         return Command(
@@ -455,6 +494,8 @@ def define_graph():
             },
             goto= END,
         )
+
+
 
     def sql_node(state: State):
         result = sql_agent.invoke(state)
@@ -469,6 +510,7 @@ def define_graph():
             goto= END,
         )
     
+
     def pdf_node(state: State):
         result = pdf_agent.invoke(state)
         print("DEBUG PDF NODE =================== ", result)
@@ -481,7 +523,10 @@ def define_graph():
             goto= END,
         )
     
+
+
     plot_agent = create_react_agent(llm, tools=[plotting_tool])
+
 
     def plotter_node(state: State):
         result = plot_agent.invoke(state)
@@ -506,14 +551,25 @@ def define_graph():
     builder.add_node("rca", rca_node)
     builder.add_node("sql", sql_node)
 
+
     memory_supervisor = MemorySaver()
     super_graph = builder.compile(checkpointer=memory_supervisor)
     return super_graph
 
+
+# @cl.on_chat_start
+# async def on_chat_start():
+#     welcome_msg = "### STC AI Assistant"
+#     msg = cl.Message(content=welcome_msg)
+
+#     super_graph = define_graph()
+#     cl.user_session.set("super_graph", super_graph)
+#     cl.user_session.set("msg", msg)
+#     await msg.send()
+
 @cl.on_chat_start
 async def on_chat_start():
-    # Use dynamic company greeting
-    welcome_msg = COMPANY_GREETING
+    welcome_msg = "### Mobily AI Assistant"
     msg = cl.Message(content=welcome_msg)
 
     super_graph = define_graph()
@@ -521,17 +577,57 @@ async def on_chat_start():
     cl.user_session.set("msg", msg)
     await msg.send()
 
+
+# @cl.on_message
+# async def on_message(message: cl.Message):
+#     # Specify a thread
+#     config = {"configurable": {"thread_id": "45"}}
+
+#     msg = cl.Message(content="", author="STC Chatbot")
+#     if_plot = False
+#     super_graph = cl.user_session.get("super_graph")
+#     node_to_stream = 'agent'
+#     async with cl.Step("STC Chatbot") as step:
+#         step.input = message.content
+#         async for event in super_graph.astream_events({"messages": [message.content]}, config, version="v2", stream_mode = 'values'):
+#             # Get chat model tokens from a particular node 
+#             if event["event"] == "on_chat_model_stream" and event['metadata'].get('langgraph_node','') == node_to_stream:
+                
+#                 #print(f"Node: {event['metadata'].get('langgraph_node','')}. Type: {event['event']}. Name: {event['name']}")
+#                 data = event["data"]
+#                 # print(data["chunk"].content, end="")
+#                 token = data["chunk"].content
+#                 print("=========== DEBUG", token)
+#                 await msg.stream_token(token)
+                
+#                 path = 'figure.json'
+#                 if os.path.exists(path):
+#                     fig = pio.read_json(path)
+#                     elements = [cl.Plotly(name="chart", figure=fig, display="inline")]
+#                     await cl.Message("", elements=elements, author="STC Chatbot").send()
+#                     os.remove(path)
+#                     print(f"{path} has been deleted.")
+#                     if_plot = True
+    
+#         # await msg.send()  
+#         if if_plot:
+#             await msg.send()  
+#         else:
+#             await msg.send()  
+#             await step.remove()
+
+
+
 @cl.on_message
 async def on_message(message: cl.Message):
-    # Use dynamic company configuration
-    config = {"configurable": {"thread_id": COMPANY_THREAD_ID}}
+    # Specify a thread
+    config = {"configurable": {"thread_id": "40"}}
 
-    msg = cl.Message(content="", author=COMPANY_AUTHOR_NAME)
+    msg = cl.Message(content="", author="Mobily Chatbot")
     if_plot = False
     super_graph = cl.user_session.get("super_graph")
     node_to_stream = 'agent'
-    
-    async with cl.Step(COMPANY_STEP_NAME) as step:
+    async with cl.Step("Mobily Chatbot") as step:
         step.input = message.content
         async for event in super_graph.astream_events({"messages": [message.content]}, config, version="v2", stream_mode = 'values'):
             # Get chat model tokens from a particular node 
@@ -539,6 +635,7 @@ async def on_message(message: cl.Message):
                 
                 print(f"Node: {event['metadata'].get('langgraph_node','')}. Type: {event['event']}. Name: {event['name']}")
                 data = event["data"]
+                # print(data["chunk"].content, end="")
                 token = data["chunk"].content
                 print("=========== DEBUG", token)
                 await msg.stream_token(token)
@@ -547,16 +644,16 @@ async def on_message(message: cl.Message):
                 if os.path.exists(path):
                     fig = pio.read_json(path)
                     elements = [cl.Plotly(name="chart", figure=fig, display="inline")]
-                    await cl.Message("", elements=elements, author=COMPANY_AUTHOR_NAME).send()
+                    await cl.Message("", elements=elements, author="Mobily Chatbot").send()
                     os.remove(path)
                     print(f"{path} has been deleted.")
                     if_plot = True
     
+        # await msg.send()  
         if if_plot:
             await msg.send()  
         else:
             await msg.send()  
             await step.remove()
 
-print(f"=== {COMPANY_DISPLAY_NAME} initialized successfully ===")
-print(f"To switch companies: COMPANY_MODE=STC python app.py or python app.py --company STC")
+

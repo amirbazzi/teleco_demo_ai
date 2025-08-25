@@ -1,3 +1,32 @@
+/* Hide “Made with Chainlit” watermark */
+/*.watermark { display: none !important; }
+
+/* Nudge chat box up a bit */
+/*.relative.flex.flex-col.items-center.gap-2.w-full {
+  transform: translateY(-10px);
+}
+
+/* Replace avatar image with your logo */
+/*span.relative.flex.shrink-0.overflow-hidden.h-6.w-6.mt-\[2px\] img {
+  display: none !important; /* hide original <img> */
+/*}
+
+span.relative.flex.shrink-0.overflow-hidden.h-6.w-6.mt-\[2px\] {
+  border-radius: 0 !important;
+  margin-top: 6px !important;
+  background-image: url("/public/mobily_logo.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+
+
+
+
+
+/* Additional styles for logo replacement */
+
 
 .watermark {
     display: none !important; /* Removes made with chainlit */

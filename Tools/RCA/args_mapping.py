@@ -5,9 +5,6 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 
-# print("args_mappings.py is running...")
-import sys
-import os
 from pathlib import Path
 
 # Calculate the root directory (stc_ai_insights)
@@ -99,23 +96,6 @@ args_assessment_prompt_template = ChatPromptTemplate.from_messages(
     ]
 )
 
-
-
-# ai_message ="""
-# [HumanMessage(content='tell me whta cause the revenue incerase in 2024 by segment', additional_kwargs={}, response_metadata={}, id='8c819ce2-dd58-4c9a-8c41-314e1b096fe5'),
-#  AIMessage(content='', additional_kwargs={'tool_calls': [{'index': 0, 'id': 'call_voZEBS2eeoJEK7VWo3vrgWYy', 'function': {'arguments': '{"question":"What caused the revenue increase in 2024 by segment?"}', 'name': 'rca_judge'}, 'type': 'function'}]}, response_metadata={'finish_reason': 'tool_calls', 'model_name': 'gpt-4o-2024-08-06', 'system_fingerprint': 'fp_50cad350e4'}, id='run-b5b13988-60e7-4f1a-9312-624a0ece6afd-0', tool_calls=[{'name': 'rca_judge', 'args': {'question': 'What caused the revenue increase in 2024 by segment?'}, 'id': 'call_voZEBS2eeoJEK7VWo3vrgWYy', 'type': 'tool_call'}]),
-#  ToolMessage(content="rca_required='Yes' reason='The query seeks to identify the causes for an increase in revenue, which requires a detailed analysis by segment.' arguments=RCAArguments(current_period='2024', previous_period=None, kpi='Revenue', levels=['Segment'], calculation_method='sum', thresholds=None, service_filter=None) missing_arguments=['Previous Period'] prompt_user='Please provide the previous year for comparison.' is_missing='Yes'", name='rca_judge', id='c7104f4a-558f-41e2-9632-cd7135875878', tool_call_id='call_voZEBS2eeoJEK7VWo3vrgWYy'),
-#  AIMessage(content='Yes, an RCA (Root Cause Analysis) is required to determine what caused the revenue increase in 2024 by segment. However, I need additional information to proceed:\n\n- **Previous Period**: Please provide the previous year for comparison.\n\nOnce you provide this information, I can assist you further.', additional_kwargs={}, response_metadata={'finish_reason': 'stop', 'model_name': 'gpt-4o-2024-08-06', 'system_fingerprint': 'fp_50cad350e4'}, id='run-5b989d8a-fca2-459b-a532-5add973c45fb-0'),
-#  HumanMessage(content='2023', additional_kwargs={}, response_metadata={}, id='3f85778b-069f-498e-8b31-e5771d60e086'),
-#  AIMessage(content="Thank you for providing the previous period. Now, we can proceed with the Root Cause Analysis to determine what caused the revenue increase in 2024 by segment. \n\nIf you have any specific thresholds or service filters you'd like to apply, please let me know. Otherwise, I will proceed with the analysis using the information provided.", additional_kwargs={}, response_metadata={'finish_reason': 'stop', 'model_name': 'gpt-4o-2024-08-06', 'system_fingerprint': 'fp_50cad350e4'}, id='run-3910252f-1875-4366-9974-7aab5d1da2d7-0'),
-#  HumanMessage(content='what was the missing arguemtn', additional_kwargs={}, response_metadata={}, id='5f8322ae-5ff8-40b3-bd99-b71c897e1a5e'),
-#  AIMessage(content='The missing argument was the **Previous Period**, which you have now provided as 2023. This allows us to compare the revenue between 2023 and 2024 by segment.', additional_kwargs={}, response_metadata={'finish_reason': 'stop', 'model_name': 'gpt-4o-2024-08-06', 'system_fingerprint': 'fp_50cad350e4'}, id='run-7620db8f-2d0f-4726-a0ba-6e5b1d8639e5-0')]"""
-
-
-
-# updated_args = args_processor.invoke({
-#         "user_interests": ai_message
-#     })
 
 
 

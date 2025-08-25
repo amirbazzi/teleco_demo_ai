@@ -1,11 +1,34 @@
+# Default company mode (MOBILY or STC)
+company: "STC"  # Change this to switch between companies
+
+# LLM Configuration
 llm:
   model: "gpt-4o"
   temperature: 0
   streaming: true
 
+# Database Configuration (shared between companies)
 database:
-  sqlite_uri: "sqlite:///C:/Users/amirb/Desktop/Personal/telecom_company (4).db"
-  local_path: "C:/Users/amirb/Desktop/Personal/telecom_company (4).db"
+  sqlite_uri: "sqlite:///C:/Users/amirb/Downloads/stc_Demo_Updated_Database.db"
+  local_path: "C:/Users/amirb/Downloads/stc_Demo_Updated_Database.db"
 
+# Models Configuration (shared between companies)
 models:
   vanna: "stc_bot"
+
+# Company Display Configuration
+companies:
+  MOBILY:
+    name: "Mobily"
+    display_name: "Mobily AI Assistant"
+    thread_id: "40"
+    greeting: "### Mobily AI Assistant"
+    author_name: "Mobily Chatbot"
+    step_name: "Mobily Chatbot"
+  STC:
+    name: "STC"
+    display_name: "STC AI Assistant"
+    thread_id: "45"
+    greeting: "### STC AI Assistant"
+    author_name: "STC Chatbot"
+    step_name: "STC Chatbot"

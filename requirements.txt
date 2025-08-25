@@ -12,3 +12,11 @@ langchain_experimental
 ipython
 chainlit
 openpyxl
+google-cloud-aiplatform
+pdf2image
+langchain
+langchain-google-vertexai
+pypdf
+langchain-astradb
+cassandra-driver
+Pillow
