@@ -1,0 +1,5 @@
+# Ignore Python virtual environment
+lang_new_2/
+
+.venv/
+venv/
